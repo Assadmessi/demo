@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ember POS — Demo</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html, body, #root { height: 100%; margin: 0; }
+  body { overflow: hidden; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const {
+  useState,
+  useRef,
+  useEffect
+} = React;
+
+/* ---------------------------------- tokens ---------------------------------- */
+const C = {
+  charcoal: "#181714",
+  surface: "#221F1A",
+  surfaceLight: "#2C2822",
+  surfaceLighter: "#37322A",
+  paper: "#F6F1E6",
+  paperDark: "#EAE2D0",
+  copper: "#C2793E",
+  copperDark: "#96592B",
+  green: "#728F5C",
+  amber: "#D3A24A",
+  red: "#B65B4A",
+  ink: "#241F19",
+  textWarm: "#EFE9DE",
+  textMuted: "#A39A89"
+};
+const fontImport = `
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+`;
+const currency = n => `$${n.toFixed(2)}`;
+
+/* ---------------------------------- icons (self-contained, no deps) ---------------------------------- */
+const IconBase = ({
+  size = 20,
+  color = "currentColor",
+  strokeWidth = 2,
+  children
+}) => /*#__PURE__*/React.createElement("svg", {
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: color,
+  strokeWidth: strokeWidth,
+  strokeLinecap: "round",
+  strokeLinejoin: "round"
+}, children);
+const Flame = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("path", {
+  d: "M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a6.5 6.5 0 1 1-13 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
+}));
+const LayoutGrid = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("rect", {
+  x: "3",
+  y: "3",
+  width: "7",
+  height: "7",
+  rx: "1"
+}), /*#__PURE__*/React.createElement("rect", {
+  x: "14",
+  y: "3",
+  width: "7",
+  height: "7",
+  rx: "1"
+}), /*#__PURE__*/React.createElement("rect", {
+  x: "3",
+  y: "14",
+  width: "7",
+  height: "7",
+  rx: "1"
+}), /*#__PURE__*/React.createElement("rect", {
+  x: "14",
+  y: "14",
+  width: "7",
+  height: "7",
+  rx: "1"
+}));
+const ChefHat = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("path", {
+  d: "M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "6",
+  y1: "17",
+  x2: "18",
+  y2: "17"
+}));
+const BarChart3 = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("path", {
+  d: "M3 3v18h18"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M18 17V9"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M13 17V5"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M8 17v-3"
+}));
+const ClipboardList = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("rect", {
+  x: "8",
+  y: "2",
+  width: "8",
+  height: "4",
+  rx: "1"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M9 12h6"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M9 16h6"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M9 8h6"
+}));
+const Plus = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("line", {
+  x1: "12",
+  y1: "5",
+  x2: "12",
+  y2: "19"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "5",
+  y1: "12",
+  x2: "19",
+  y2: "12"
+}));
+const Minus = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("line", {
+  x1: "5",
+  y1: "12",
+  x2: "19",
+  y2: "12"
+}));
+const X = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("line", {
+  x1: "18",
+  y1: "6",
+  x2: "6",
+  y2: "18"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "6",
+  y1: "6",
+  x2: "18",
+  y2: "18"
+}));
+const Send = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("line", {
+  x1: "22",
+  y1: "2",
+  x2: "11",
+  y2: "13"
+}), /*#__PURE__*/React.createElement("polygon", {
+  points: "22 2 15 22 11 13 2 9 22 2"
+}));
+const Clock = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("circle", {
+  cx: "12",
+  cy: "12",
+  r: "10"
+}), /*#__PURE__*/React.createElement("polyline", {
+  points: "12 6 12 12 16 14"
+}));
+const Users = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("path", {
+  d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "9",
+  cy: "7",
+  r: "4"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M23 21v-2a4 4 0 0 0-3-3.87"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M16 3.13a4 4 0 0 1 0 7.75"
+}));
+const Receipt = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("path", {
+  d: "M4 2h16v20l-3-2-3 2-3-2-3 2-3-2-1 1V2Z"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "8",
+  y1: "7",
+  x2: "16",
+  y2: "7"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "8",
+  y1: "11",
+  x2: "16",
+  y2: "11"
+}));
+const TrendingUp = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("polyline", {
+  points: "22 7 13.5 15.5 8.5 10.5 2 17"
+}), /*#__PURE__*/React.createElement("polyline", {
+  points: "16 7 22 7 22 13"
+}));
+const HelpCircle = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("circle", {
+  cx: "12",
+  cy: "12",
+  r: "10"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "12",
+  y1: "17",
+  x2: "12.01",
+  y2: "17"
+}));
+const ArrowRight = p => /*#__PURE__*/React.createElement(IconBase, p, /*#__PURE__*/React.createElement("line", {
+  x1: "5",
+  y1: "12",
+  x2: "19",
+  y2: "12"
+}), /*#__PURE__*/React.createElement("polyline", {
+  points: "12 5 19 12 12 19"
+}));
+
+/* ---------------------------------- mock data ---------------------------------- */
+const CATEGORIES = ["Starters", "Mains", "Grill", "Drinks", "Desserts"];
+const MENU = [{
+  id: "s1",
+  cat: "Starters",
+  name: "Charred Octopus",
+  price: 14
+}, {
+  id: "s2",
+  cat: "Starters",
+  name: "Burrata & Fig",
+  price: 12
+}, {
+  id: "s3",
+  cat: "Starters",
+  name: "Soup of the Day",
+  price: 9
+}, {
+  id: "s4",
+  cat: "Starters",
+  name: "Tuna Tartare",
+  price: 15
+}, {
+  id: "m1",
+  cat: "Mains",
+  name: "Roasted Chicken",
+  price: 22
+}, {
+  id: "m2",
+  cat: "Mains",
+  name: "Wild Mushroom Risotto",
+  price: 19
+}, {
+  id: "m3",
+  cat: "Mains",
+  name: "Pan-Seared Salmon",
+  price: 26
+}, {
+  id: "m4",
+  cat: "Mains",
+  name: "Duck Confit",
+  price: 28
+}, {
+  id: "g1",
+  cat: "Grill",
+  name: "Ribeye, 12oz",
+  price: 34
+}, {
+  id: "g2",
+  cat: "Grill",
+  name: "Lamb Chops",
+  price: 32
+}, {
+  id: "g3",
+  cat: "Grill",
+  name: "Grilled Swordfish",
+  price: 27
+}, {
+  id: "g4",
+  cat: "Grill",
+  name: "Vegetable Skewers",
+  price: 18
+}, {
+  id: "d1",
+  cat: "Drinks",
+  name: "House Red",
+  price: 11
+}, {
+  id: "d2",
+  cat: "Drinks",
+  name: "House White",
+  price: 11
+}, {
+  id: "d3",
+  cat: "Drinks",
+  name: "Craft Lager",
+  price: 8
+}, {
+  id: "d4",
+  cat: "Drinks",
+  name: "Iced Tea",
+  price: 5
+}, {
+  id: "x1",
+  cat: "Desserts",
+  name: "Chocolate Tart",
+  price: 10
+}, {
+  id: "x2",
+  cat: "Desserts",
+  name: "Crème Brûlée",
+  price: 9
+}, {
+  id: "x3",
+  cat: "Desserts",
+  name: "Affogato",
+  price: 8
+}];
+const initialTables = [{
+  id: 1,
+  seats: 2,
+  status: "empty"
+}, {
+  id: 2,
+  seats: 4,
+  status: "occupied"
+}, {
+  id: 3,
+  seats: 4,
+  status: "empty"
+}, {
+  id: 4,
+  seats: 6,
+  status: "occupied"
+}, {
+  id: 5,
+  seats: 2,
+  status: "bill"
+}, {
+  id: 6,
+  seats: 4,
+  status: "empty"
+}, {
+  id: 7,
+  seats: 2,
+  status: "empty"
+}, {
+  id: 8,
+  seats: 8,
+  status: "occupied"
+}, {
+  id: 9,
+  seats: 4,
+  status: "empty"
+}, {
+  id: 10,
+  seats: 2,
+  status: "empty"
+}, {
+  id: 11,
+  seats: 4,
+  status: "bill"
+}, {
+  id: 12,
+  seats: 6,
+  status: "empty"
+}];
+const initialTableOrders = {
+  2: [{
+    id: "m3",
+    qty: 2
+  }, {
+    id: "d4",
+    qty: 2
+  }],
+  4: [{
+    id: "g1",
+    qty: 1
+  }, {
+    id: "g4",
+    qty: 1
+  }, {
+    id: "d1",
+    qty: 2
+  }],
+  5: [{
+    id: "s2",
+    qty: 1
+  }, {
+    id: "x2",
+    qty: 1
+  }],
+  8: [{
+    id: "m1",
+    qty: 3
+  }, {
+    id: "s3",
+    qty: 2
+  }, {
+    id: "d2",
+    qty: 3
+  }],
+  11: [{
+    id: "g3",
+    qty: 2
+  }, {
+    id: "d3",
+    qty: 2
+  }]
+};
+const initialKitchenOrders = [{
+  id: "K-101",
+  table: 4,
+  status: "cooking",
+  items: [{
+    name: "Ribeye, 12oz",
+    qty: 1
+  }, {
+    name: "Vegetable Skewers",
+    qty: 1
+  }],
+  firedAt: "7:42 PM"
+}, {
+  id: "K-102",
+  table: 8,
+  status: "new",
+  items: [{
+    name: "Roasted Chicken",
+    qty: 3
+  }, {
+    name: "Soup of the Day",
+    qty: 2
+  }],
+  firedAt: "7:51 PM"
+}, {
+  id: "K-103",
+  table: 2,
+  status: "ready",
+  items: [{
+    name: "Pan-Seared Salmon",
+    qty: 2
+  }],
+  firedAt: "7:35 PM"
+}];
+const hourlySales = [{
+  hour: "11a",
+  sales: 180
+}, {
+  hour: "12p",
+  sales: 420
+}, {
+  hour: "1p",
+  sales: 380
+}, {
+  hour: "2p",
+  sales: 140
+}, {
+  hour: "5p",
+  sales: 260
+}, {
+  hour: "6p",
+  sales: 410
+}, {
+  hour: "7p",
+  sales: 520
+}, {
+  hour: "8p",
+  sales: 480
+}, {
+  hour: "9p",
+  sales: 260
+}];
+const topSellers = [{
+  name: "Ribeye, 12oz",
+  sold: 18,
+  pct: 100
+}, {
+  name: "Pan-Seared Salmon",
+  sold: 14,
+  pct: 78
+}, {
+  name: "House Red",
+  sold: 22,
+  pct: 60
+}, {
+  name: "Wild Mushroom Risotto",
+  sold: 11,
+  pct: 48
+}, {
+  name: "Chocolate Tart",
+  sold: 9,
+  pct: 34
+}];
+
+/* ---------------------------------- guided tour ---------------------------------- */
+
+const TOUR_STEPS = [{
+  view: "tables",
+  title: "Welcome to Ember",
+  text: "Here's a 30-second walkthrough of how an order moves through the floor, the kitchen, and the daily reports. Skip any time."
+}, {
+  view: "tables",
+  ref: "tableCard",
+  title: "Pick a table",
+  text: "Tap any table to open its check. The color shows whether it's open, occupied, or waiting on the bill."
+}, {
+  view: "order",
+  selectTable: 2,
+  ref: "menuGrid",
+  title: "Build the order",
+  text: "Tap a menu item and it's added to the check on the right — no drag, no extra taps."
+}, {
+  view: "order",
+  selectTable: 2,
+  ref: "ticketPanel",
+  title: "The ticket",
+  text: "Quantities, subtotal, and tax update live. Sending it fires the order straight to the kitchen."
+}, {
+  view: "kitchen",
+  ref: "kitchenNew",
+  title: "Kitchen display",
+  text: "New tickets land here and move across as staff tap through New → Cooking → Ready."
+}, {
+  view: "dashboard",
+  ref: "reportsChart",
+  title: "Reports",
+  text: "Sales, top sellers, and covers roll up automatically through the day."
+}];
+function TourOverlay({
+  step,
+  stepIndex,
+  total,
+  rect,
+  onNext,
+  onSkip
+}) {
+  const isLast = stepIndex === total - 1;
+  const pad = 8;
+  let cardStyle = {
+    position: "fixed",
+    left: "50%",
+    top: "50%",
+    transform: "translate(-50%, -50%)"
+  };
+  if (rect) {
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const placeBelow = spaceBelow > 190;
+    const left = Math.min(Math.max(rect.left, 16), window.innerWidth - 296);
+    cardStyle = placeBelow ? {
+      position: "fixed",
+      left,
+      top: rect.bottom + 16
+    } : {
+      position: "fixed",
+      left,
+      top: Math.max(rect.top - 176, 16)
+    };
+  }
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-40",
+    onClick: e => e.stopPropagation()
+  }), rect ? /*#__PURE__*/React.createElement("div", {
+    className: "fixed z-40 rounded-xl pointer-events-none transition-all duration-300",
+    style: {
+      left: rect.left - pad,
+      top: rect.top - pad,
+      width: rect.width + pad * 2,
+      height: rect.height + pad * 2,
+      boxShadow: `0 0 0 9999px rgba(12,10,8,0.72)`,
+      border: `2px solid ${C.copper}`
+    }
+  }) : /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-40 pointer-events-none",
+    style: {
+      background: "rgba(12,10,8,0.72)"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "z-50 w-[280px] rounded-xl p-5",
+    style: {
+      ...cardStyle,
+      background: C.paper,
+      boxShadow: "0 12px 32px rgba(0,0,0,0.4)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'Fraunces', serif",
+      fontSize: 17,
+      color: C.ink
+    }
+  }, step.title), /*#__PURE__*/React.createElement("button", {
+    onClick: onSkip,
+    "aria-label": "Skip tour"
+  }, /*#__PURE__*/React.createElement(X, {
+    size: 16,
+    color: "#9C927E"
+  }))), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 12.5,
+      color: "#5A5344",
+      lineHeight: 1.6,
+      marginBottom: 16
+    }
+  }, step.text), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1.5"
+  }, TOUR_STEPS.map((_, i) => /*#__PURE__*/React.createElement("span", {
+    key: i,
+    className: "w-1.5 h-1.5 rounded-full",
+    style: {
+      background: i === stepIndex ? C.copperDark : "#DED4BE"
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onSkip,
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 12,
+      color: "#9C927E"
+    }
+  }, "Skip tour"), /*#__PURE__*/React.createElement("button", {
+    onClick: onNext,
+    className: "flex items-center gap-1.5 px-3 py-1.5 rounded-full",
+    style: {
+      background: C.copperDark,
+      color: "#F6F1E6",
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 12.5,
+      fontWeight: 600
+    }
+  }, isLast ? "Done" : "Next", " ", /*#__PURE__*/React.createElement(ArrowRight, {
+    size: 13
+  }))))));
+}
+
+/* ---------------------------------- small pieces ---------------------------------- */
+
+function NavButton({
+  icon: Icon,
+  label,
+  active,
+  onClick
+}) {
+  return /*#__PURE__*/React.createElement("button", {
+    onClick: onClick,
+    className: "w-full flex flex-col items-center gap-1.5 py-3 transition-colors",
+    style: {
+      color: active ? C.paper : "#8B8375",
+      borderLeft: `3px solid ${active ? C.copper : "transparent"}`,
+      background: active ? C.surfaceLight : "transparent"
+    }
+  }, /*#__PURE__*/React.createElement(Icon, {
+    size: 19,
+    strokeWidth: 1.8
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 10.5,
+      letterSpacing: 0.2
+    }
+  }, label));
+}
+function StatusPill({
+  status
+}) {
+  const map = {
+    empty: {
+      bg: "transparent",
+      border: "#4A4438",
+      text: "#8B8375",
+      label: "Open"
+    },
+    occupied: {
+      bg: "rgba(194,121,62,0.15)",
+      border: C.copper,
+      text: C.copper,
+      label: "Occupied"
+    },
+    bill: {
+      bg: "rgba(114,143,92,0.15)",
+      border: C.green,
+      text: C.green,
+      label: "Bill requested"
+    }
+  };
+  const s = map[status];
+  return /*#__PURE__*/React.createElement("span", {
+    className: "px-2 py-0.5 rounded-full text-[10.5px]",
+    style: {
+      background: s.bg,
+      border: `1px solid ${s.border}`,
+      color: s.text,
+      fontFamily: "'IBM Plex Sans', sans-serif"
+    }
+  }, s.label);
+}
+
+/* ---------------------------------- Order screen ---------------------------------- */
+
+function OrderScreen({
+  table,
+  tableOrders,
+  setTableOrders,
+  sendToKitchen,
+  goToTables,
+  menuGridRef,
+  ticketPanelRef
+}) {
+  const [cat, setCat] = useState("Starters");
+  const order = tableOrders[table.id] || [];
+  const changeQty = (itemId, delta) => {
+    setTableOrders(prev => {
+      const list = prev[table.id] || [];
+      const existing = list.find(l => l.id === itemId);
+      let next;
+      if (existing) {
+        const newQty = existing.qty + delta;
+        next = newQty <= 0 ? list.filter(l => l.id !== itemId) : list.map(l => l.id === itemId ? {
+          ...l,
+          qty: newQty
+        } : l);
+      } else if (delta > 0) {
+        next = [...list, {
+          id: itemId,
+          qty: 1
+        }];
+      } else {
+        next = list;
+      }
+      return {
+        ...prev,
+        [table.id]: next
+      };
+    });
+  };
+  const lines = order.map(l => ({
+    ...l,
+    item: MENU.find(m => m.id === l.id)
+  }));
+  const subtotal = lines.reduce((s, l) => s + l.item.price * l.qty, 0);
+  const tax = subtotal * 0.1;
+  const total = subtotal + tax;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "flex h-full"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex flex-col p-6 overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-5"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+    onClick: goToTables,
+    className: "text-[12px] mb-1",
+    style: {
+      color: "#8B8375",
+      fontFamily: "'IBM Plex Sans', sans-serif"
+    }
+  }, "← All tables"), /*#__PURE__*/React.createElement("h1", {
+    style: {
+      fontFamily: "'Fraunces', serif",
+      color: C.textWarm,
+      fontSize: 26,
+      fontWeight: 500
+    }
+  }, "Table ", table.id)), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5",
+    style: {
+      color: "#8B8375"
+    }
+  }, /*#__PURE__*/React.createElement(Users, {
+    size: 15
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 13
+    }
+  }, table.seats, " seats"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 mb-5 flex-wrap"
+  }, CATEGORIES.map(c => /*#__PURE__*/React.createElement("button", {
+    key: c,
+    onClick: () => setCat(c),
+    className: "px-4 py-2 rounded-full text-[13px] transition-colors",
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      background: cat === c ? C.copper : C.surfaceLight,
+      color: cat === c ? "#1C1611" : "#B8B0A0",
+      fontWeight: cat === c ? 600 : 400
+    }
+  }, c))), /*#__PURE__*/React.createElement("div", {
+    ref: menuGridRef,
+    className: "grid grid-cols-3 gap-3 overflow-y-auto pr-1"
+  }, MENU.filter(m => m.cat === cat).map(item => /*#__PURE__*/React.createElement("button", {
+    key: item.id,
+    onClick: () => changeQty(item.id, 1),
+    className: "text-left p-4 rounded-lg transition-all",
+    style: {
+      background: C.surfaceLight,
+      border: `1px solid ${C.surfaceLighter}`
+    },
+    onMouseEnter: e => e.currentTarget.style.borderColor = C.copper,
+    onMouseLeave: e => e.currentTarget.style.borderColor = C.surfaceLighter
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      color: C.textWarm,
+      fontSize: 14,
+      fontWeight: 500,
+      marginBottom: 10
+    }
+  }, item.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: "'Fraunces', serif",
+      color: C.copper,
+      fontSize: 18
+    }
+  }, currency(item.price)))))), /*#__PURE__*/React.createElement("div", {
+    ref: ticketPanelRef,
+    className: "w-[320px] flex flex-col shrink-0",
+    style: {
+      background: C.paper,
+      backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.02) 3px, rgba(0,0,0,0.02) 4px)`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "p-5 pb-3",
+    style: {
+      borderBottom: `1px dashed ${C.paperDark}`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'Fraunces', serif",
+      fontSize: 17,
+      color: C.ink
+    }
+  }, "Check · Table ", table.id), /*#__PURE__*/React.createElement(Receipt, {
+    size: 16,
+    color: C.copperDark
+  })), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 11.5,
+      color: "#8A8272"
+    }
+  }, lines.length === 0 ? "No items yet" : `${lines.reduce((s, l) => s + l.qty, 0)} items`)), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto px-5 py-3"
+  }, lines.length === 0 && /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 12.5,
+      color: "#A69C87",
+      lineHeight: 1.6
+    }
+  }, "Tap a menu item to add it to this table's check."), lines.map(l => /*#__PURE__*/React.createElement("div", {
+    key: l.id,
+    className: "flex items-center justify-between py-2.5",
+    style: {
+      borderBottom: `1px solid ${C.paperDark}`
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 13,
+      color: C.ink,
+      fontWeight: 500
+    }
+  }, l.item.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 11.5,
+      color: "#8A8272"
+    }
+  }, currency(l.item.price), " each")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => changeQty(l.id, -1),
+    className: "w-6 h-6 rounded-full flex items-center justify-center",
+    style: {
+      background: C.paperDark
+    }
+  }, /*#__PURE__*/React.createElement(Minus, {
+    size: 12,
+    color: C.ink
+  })), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'Fraunces', serif",
+      fontSize: 14,
+      color: C.ink,
+      minWidth: 14,
+      textAlign: "center"
+    }
+  }, l.qty), /*#__PURE__*/React.createElement("button", {
+    onClick: () => changeQty(l.id, 1),
+    className: "w-6 h-6 rounded-full flex items-center justify-center",
+    style: {
+      background: C.copper
+    }
+  }, /*#__PURE__*/React.createElement(Plus, {
+    size: 12,
+    color: "#1C1611"
+  })))))), /*#__PURE__*/React.createElement("div", {
+    className: "p-5 pt-3",
+    style: {
+      borderTop: `1px dashed ${C.paperDark}`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between mb-1",
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 12.5,
+      color: "#6B6350"
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "Subtotal"), /*#__PURE__*/React.createElement("span", null, currency(subtotal))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between mb-2",
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 12.5,
+      color: "#6B6350"
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "Tax (10%)"), /*#__PURE__*/React.createElement("span", null, currency(tax))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between mb-4",
+    style: {
+      fontFamily: "'Fraunces', serif",
+      fontSize: 19,
+      color: C.ink
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "Total"), /*#__PURE__*/React.createElement("span", null, currency(total))), /*#__PURE__*/React.createElement("button", {
+    disabled: lines.length === 0,
+    onClick: () => sendToKitchen(table.id, lines),
+    className: "w-full flex items-center justify-center gap-2 py-3 rounded-lg transition-opacity",
+    style: {
+      background: lines.length === 0 ? "#B9AF9A" : C.copperDark,
+      color: "#F6F1E6",
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 13.5,
+      fontWeight: 600,
+      opacity: lines.length === 0 ? 0.6 : 1,
+      cursor: lines.length === 0 ? "not-allowed" : "pointer"
+    }
+  }, /*#__PURE__*/React.createElement(Send, {
+    size: 14
+  }), " Send to kitchen"))));
+}
+
+/* ---------------------------------- Tables screen ---------------------------------- */
+
+function TablesScreen({
+  tables,
+  selectTable,
+  highlightId,
+  highlightRef
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "p-6 h-full overflow-y-auto"
+  }, /*#__PURE__*/React.createElement("h1", {
+    style: {
+      fontFamily: "'Fraunces', serif",
+      color: C.textWarm,
+      fontSize: 26,
+      fontWeight: 500,
+      marginBottom: 4
+    }
+  }, "Floor"), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 13,
+      color: "#8B8375",
+      marginBottom: 20
+    }
+  }, "Tap a table to open its check"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-4"
+  }, tables.map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    ref: t.id === highlightId ? highlightRef : null,
+    onClick: () => selectTable(t.id),
+    className: "p-5 rounded-xl text-left transition-colors",
+    style: {
+      background: t.status === "empty" ? C.surface : C.surfaceLight,
+      border: `1px solid ${t.status === "empty" ? C.surfaceLight : C.surfaceLighter}`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start justify-between mb-6"
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'Fraunces', serif",
+      fontSize: 28,
+      color: C.textWarm
+    }
+  }, t.id), /*#__PURE__*/React.createElement(Users, {
+    size: 15,
+    color: "#8B8375"
+  })), /*#__PURE__*/React.createElement(StatusPill, {
+    status: t.status
+  })))));
+}
+
+/* ---------------------------------- Kitchen screen ---------------------------------- */
+
+function KDSColumn({
+  title,
+  color,
+  tickets,
+  advance,
+  actionLabel,
+  colRef
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    ref: colRef,
+    className: "flex-1 min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2 h-2 rounded-full",
+    style: {
+      background: color
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 12.5,
+      color: "#B8B0A0",
+      fontWeight: 600
+    }
+  }, title, " · ", tickets.length)), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col gap-3"
+  }, tickets.map(t => /*#__PURE__*/React.createElement("div", {
+    key: t.id,
+    className: "rounded-lg p-4",
+    style: {
+      background: C.paper,
+      borderLeft: `4px solid ${color}`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between items-center mb-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'Fraunces', serif",
+      fontSize: 15,
+      color: C.ink
+    }
+  }, "Table ", t.table), /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-1",
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 10.5,
+      color: "#8A8272"
+    }
+  }, /*#__PURE__*/React.createElement(Clock, {
+    size: 11
+  }), " ", t.firedAt)), /*#__PURE__*/React.createElement("ul", {
+    className: "mb-3"
+  }, t.items.map((it, i) => /*#__PURE__*/React.createElement("li", {
+    key: i,
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 12.5,
+      color: "#4A4438",
+      marginBottom: 3
+    }
+  }, it.qty, "× ", it.name))), actionLabel && /*#__PURE__*/React.createElement("button", {
+    onClick: () => advance(t.id),
+    className: "w-full py-2 rounded-md text-[12px] font-semibold",
+    style: {
+      background: color,
+      color: "#1C1611",
+      fontFamily: "'IBM Plex Sans', sans-serif"
+    }
+  }, actionLabel))), tickets.length === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg p-4 text-center",
+    style: {
+      border: `1px dashed ${C.surfaceLighter}`
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 11.5,
+      color: "#6B6455"
+    }
+  }, "Nothing here"))));
+}
+function KitchenScreen({
+  kitchenOrders,
+  setKitchenOrders,
+  newColRef
+}) {
+  const advance = id => {
+    setKitchenOrders(prev => prev.map(k => {
+      if (k.id !== id) return k;
+      if (k.status === "new") return {
+        ...k,
+        status: "cooking"
+      };
+      if (k.status === "cooking") return {
+        ...k,
+        status: "ready"
+      };
+      return null;
+    }).filter(Boolean));
+  };
+  const byStatus = s => kitchenOrders.filter(k => k.status === s);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "p-6 h-full flex flex-col overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-6"
+  }, /*#__PURE__*/React.createElement(ChefHat, {
+    size: 20,
+    color: C.copper
+  }), /*#__PURE__*/React.createElement("h1", {
+    style: {
+      fontFamily: "'Fraunces', serif",
+      color: C.textWarm,
+      fontSize: 26,
+      fontWeight: 500
+    }
+  }, "Kitchen display")), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-5 flex-1 overflow-y-auto"
+  }, /*#__PURE__*/React.createElement(KDSColumn, {
+    colRef: newColRef,
+    title: "New",
+    color: C.copper,
+    tickets: byStatus("new"),
+    advance: advance,
+    actionLabel: "Start cooking"
+  }), /*#__PURE__*/React.createElement(KDSColumn, {
+    title: "Cooking",
+    color: C.amber,
+    tickets: byStatus("cooking"),
+    advance: advance,
+    actionLabel: "Mark ready"
+  }), /*#__PURE__*/React.createElement(KDSColumn, {
+    title: "Ready",
+    color: C.green,
+    tickets: byStatus("ready"),
+    advance: () => {},
+    actionLabel: null
+  })));
+}
+
+/* ---------------------------------- Dashboard screen ---------------------------------- */
+
+function StatCard({
+  label,
+  value,
+  icon: Icon
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl p-4 flex-1",
+    style: {
+      background: C.surfaceLight
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-2",
+    style: {
+      color: "#8B8375"
+    }
+  }, /*#__PURE__*/React.createElement(Icon, {
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 11.5
+    }
+  }, label)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'Fraunces', serif",
+      fontSize: 24,
+      color: C.textWarm
+    }
+  }, value));
+}
+function HourlyChart({
+  data
+}) {
+  const max = Math.max(...data.map(d => d.sales));
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "flex-end",
+      gap: 10,
+      height: 220,
+      marginTop: 12,
+      padding: "0 4px"
+    }
+  }, data.map(d => /*#__PURE__*/React.createElement("div", {
+    key: d.hour,
+    style: {
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      height: "100%"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 10,
+      color: "#8B8375",
+      marginBottom: 4
+    }
+  }, "$", d.sales), /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: "60%",
+      height: `${d.sales / max * 100}%`,
+      background: C.copper,
+      borderRadius: "4px 4px 0 0",
+      minHeight: 4
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 10.5,
+      color: "#8B8375",
+      marginTop: 8
+    }
+  }, d.hour))));
+}
+function DashboardScreen({
+  chartRef
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "p-6 h-full overflow-y-auto"
+  }, /*#__PURE__*/React.createElement("h1", {
+    style: {
+      fontFamily: "'Fraunces', serif",
+      color: C.textWarm,
+      fontSize: 26,
+      fontWeight: 500,
+      marginBottom: 20
+    }
+  }, "Today"), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-4 mb-6"
+  }, /*#__PURE__*/React.createElement(StatCard, {
+    label: "Net sales",
+    value: "$2,480",
+    icon: TrendingUp
+  }), /*#__PURE__*/React.createElement(StatCard, {
+    label: "Orders",
+    value: "64",
+    icon: Receipt
+  }), /*#__PURE__*/React.createElement(StatCard, {
+    label: "Average check",
+    value: "$38.75",
+    icon: ClipboardList
+  }), /*#__PURE__*/React.createElement(StatCard, {
+    label: "Tables turned",
+    value: "9",
+    icon: Users
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-5"
+  }, /*#__PURE__*/React.createElement("div", {
+    ref: chartRef,
+    className: "flex-1 rounded-xl p-5",
+    style: {
+      background: C.surfaceLight
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 12.5,
+      color: "#B8B0A0",
+      fontWeight: 600
+    }
+  }, "Sales by hour"), /*#__PURE__*/React.createElement(HourlyChart, {
+    data: hourlySales
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "w-[300px] shrink-0 rounded-xl p-5",
+    style: {
+      background: C.surfaceLight
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 12.5,
+      color: "#B8B0A0",
+      fontWeight: 600
+    }
+  }, "Top sellers"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 flex flex-col gap-3"
+  }, topSellers.map(s => /*#__PURE__*/React.createElement("div", {
+    key: s.name
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 12.5,
+      color: C.textWarm
+    }
+  }, s.name), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 12,
+      color: "#8B8375"
+    }
+  }, s.sold)), /*#__PURE__*/React.createElement("div", {
+    className: "h-1.5 rounded-full",
+    style: {
+      background: C.surfaceLighter
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-1.5 rounded-full",
+    style: {
+      width: `${s.pct}%`,
+      background: C.copper
+    }
+  }))))))));
+}
+
+/* ---------------------------------- App ---------------------------------- */
+
+function EmberPOS() {
+  const [view, setView] = useState("tables");
+  const [tables, setTables] = useState(initialTables);
+  const [tableOrders, setTableOrders] = useState(initialTableOrders);
+  const [kitchenOrders, setKitchenOrders] = useState(initialKitchenOrders);
+  const [selectedTableId, setSelectedTableId] = useState(2);
+  const selectedTable = tables.find(t => t.id === selectedTableId);
+  const selectTable = id => {
+    setSelectedTableId(id);
+    setView("order");
+  };
+  const [tourActive, setTourActive] = useState(true);
+  const [tourStep, setTourStep] = useState(0);
+  const [tourRect, setTourRect] = useState(null);
+  const refs = {
+    tableCard: useRef(null),
+    menuGrid: useRef(null),
+    ticketPanel: useRef(null),
+    kitchenNew: useRef(null),
+    reportsChart: useRef(null)
+  };
+  const startTour = () => {
+    setTourStep(0);
+    setSelectedTableId(2);
+    setView("tables");
+    setTourActive(true);
+  };
+  const skipTour = () => setTourActive(false);
+  const nextStep = () => {
+    if (tourStep >= TOUR_STEPS.length - 1) setTourActive(false);else setTourStep(s => s + 1);
+  };
+  useEffect(() => {
+    if (!tourActive) return;
+    const step = TOUR_STEPS[tourStep];
+    if (step.selectTable) setSelectedTableId(step.selectTable);
+    if (step.view) setView(step.view);
+  }, [tourStep, tourActive]);
+  useEffect(() => {
+    if (!tourActive) {
+      setTourRect(null);
+      return;
+    }
+    const step = TOUR_STEPS[tourStep];
+    if (!step.ref) {
+      setTourRect(null);
+      return;
+    }
+    const measure = () => {
+      const el = refs[step.ref] && refs[step.ref].current;
+      if (el) setTourRect(el.getBoundingClientRect());
+    };
+    const t = setTimeout(measure, 70);
+    window.addEventListener("resize", measure);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", measure);
+    };
+  }, [tourStep, tourActive, view]);
+  const sendToKitchen = (tableId, lines) => {
+    const ticketId = `K-${Math.floor(100 + Math.random() * 900)}`;
+    setKitchenOrders(prev => [...prev, {
+      id: ticketId,
+      table: tableId,
+      status: "new",
+      items: lines.map(l => ({
+        name: l.item.name,
+        qty: l.qty
+      })),
+      firedAt: new Date().toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit"
+      })
+    }]);
+    setTables(prev => prev.map(t => t.id === tableId ? {
+      ...t,
+      status: "occupied"
+    } : t));
+  };
+  const kitchenCount = kitchenOrders.filter(k => k.status !== "ready").length;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "w-full h-full flex",
+    style: {
+      background: C.charcoal,
+      height: "100vh",
+      fontFamily: "'IBM Plex Sans', sans-serif"
+    }
+  }, /*#__PURE__*/React.createElement("style", null, fontImport), /*#__PURE__*/React.createElement("div", {
+    className: "w-[76px] shrink-0 flex flex-col items-center",
+    style: {
+      background: C.surface,
+      borderRight: `1px solid ${C.surfaceLighter}`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "py-5"
+  }, /*#__PURE__*/React.createElement(Flame, {
+    size: 22,
+    color: C.copper
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "w-full flex flex-col"
+  }, /*#__PURE__*/React.createElement(NavButton, {
+    icon: LayoutGrid,
+    label: "Tables",
+    active: view === "tables",
+    onClick: () => setView("tables")
+  }), /*#__PURE__*/React.createElement(NavButton, {
+    icon: ClipboardList,
+    label: "Order",
+    active: view === "order",
+    onClick: () => setView("order")
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "relative"
+  }, /*#__PURE__*/React.createElement(NavButton, {
+    icon: ChefHat,
+    label: "Kitchen",
+    active: view === "kitchen",
+    onClick: () => setView("kitchen")
+  }), kitchenCount > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "absolute top-2 right-4 w-4 h-4 rounded-full flex items-center justify-center",
+    style: {
+      background: C.copper,
+      color: "#1C1611",
+      fontSize: 9.5,
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontWeight: 700
+    }
+  }, kitchenCount)), /*#__PURE__*/React.createElement(NavButton, {
+    icon: BarChart3,
+    label: "Reports",
+    active: view === "dashboard",
+    onClick: () => setView("dashboard")
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: startTour,
+    className: "w-full flex flex-col items-center gap-1.5 py-4",
+    style: {
+      color: "#8B8375"
+    },
+    title: "Replay guide"
+  }, /*#__PURE__*/React.createElement(HelpCircle, {
+    size: 18,
+    strokeWidth: 1.8
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: 10.5
+    }
+  }, "Guide"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, view === "tables" && /*#__PURE__*/React.createElement(TablesScreen, {
+    tables: tables,
+    selectTable: selectTable,
+    highlightId: 2,
+    highlightRef: refs.tableCard
+  }), view === "order" && selectedTable && /*#__PURE__*/React.createElement(OrderScreen, {
+    table: selectedTable,
+    tableOrders: tableOrders,
+    setTableOrders: setTableOrders,
+    sendToKitchen: sendToKitchen,
+    goToTables: () => setView("tables"),
+    menuGridRef: refs.menuGrid,
+    ticketPanelRef: refs.ticketPanel
+  }), view === "kitchen" && /*#__PURE__*/React.createElement(KitchenScreen, {
+    kitchenOrders: kitchenOrders,
+    setKitchenOrders: setKitchenOrders,
+    newColRef: refs.kitchenNew
+  }), view === "dashboard" && /*#__PURE__*/React.createElement(DashboardScreen, {
+    chartRef: refs.reportsChart
+  })), tourActive && /*#__PURE__*/React.createElement(TourOverlay, {
+    step: TOUR_STEPS[tourStep],
+    stepIndex: tourStep,
+    total: TOUR_STEPS.length,
+    rect: tourRect,
+    onNext: nextStep,
+    onSkip: skipTour
+  }));
+}
+ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(EmberPOS, null));
+</script>
+</body>
+</html>
